@@ -10,6 +10,7 @@ const Layout = () => {
         { id: '2', name: 'Staging DB', ip: '10.0.0.5' }
     ]);
     const [activeHostId, setActiveHostId] = useState(null);
+    // eslint-disable-next-line no-unused-vars
     const [showNewConnection, setShowNewConnection] = useState(false);
 
     const activeHost = hosts.find(h => h.id === activeHostId);
