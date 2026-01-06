@@ -10,24 +10,23 @@ const Layout = () => {
         { id: '2', name: 'Staging DB', ip: '10.0.0.5' }
     ]);
     const [activeHostId, setActiveHostId] = useState(null);
-    // eslint-disable-next-line no-unused-vars
-    const [showNewConnection, setShowNewConnection] = useState(false);
+    const [_showNewConnection, _setShowNewConnection] = useState(false);
 
     const activeHost = hosts.find(h => h.id === activeHostId);
 
     const handleSelectHost = (id) => {
         setActiveHostId(id);
-        setShowNewConnection(false);
+        _setShowNewConnection(false);
     };
 
     const handleNewConnection = () => {
         setActiveHostId(null);
-        setShowNewConnection(true);
+        _setShowNewConnection(true);
     };
 
     const handleSaveHost = (newHost) => {
         setHosts([...hosts, { ...newHost, id: Date.now().toString() }]);
-        setShowNewConnection(false);
+        _setShowNewConnection(false);
     };
 
     return (
