@@ -22,8 +22,8 @@ test.describe('SSH Client Application', () => {
   test('should show new connection form by default', async ({ page }) => {
     await page.goto('/');
     
-    // Check for form elements
-    await expect(page.locator('text=New Connection')).toBeVisible();
+    // Check for form elements - using heading role to be more specific
+    await expect(page.getByRole('heading', { name: 'New Connection' })).toBeVisible();
     await expect(page.locator('input[placeholder="Production Server"]')).toBeVisible();
     await expect(page.locator('input[placeholder="192.168.1.1"]')).toBeVisible();
     await expect(page.locator('input[placeholder="22"]')).toBeVisible();

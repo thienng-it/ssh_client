@@ -49,10 +49,33 @@ A sleek, modern SSH client built with React, Vite, and xterm.js. Inspired by Ter
    npm run build
    ```
 
+## Testing
+
+This project includes comprehensive test coverage:
+- **Unit & Component Tests**: 22 tests using Vitest and React Testing Library
+- **E2E Tests**: 7 end-to-end tests using Playwright
+- **Continuous Integration**: Automated testing on PRs and main branch
+
+### Run Tests
+
+```bash
+# Run unit and component tests
+npm test
+
+# Run E2E tests
+npm run test:e2e
+
+# Generate coverage report
+npm run test:coverage
+```
+
+For more details, see the [Testing Documentation](./docs/testing.md).
+
 ## Documentation
 
 - [Git Setup & Deployment Guide](./docs/git-setup.md): Detailed steps on how this repo was initialized and connected to GitHub.
 - [Deployment Info](./docs/deployment.md): Instructions on how the GitHub Actions deployment works.
+- [Testing Guide](./docs/testing.md): Comprehensive guide to running and writing tests.
 
 ## License
 
