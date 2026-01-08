@@ -27,11 +27,11 @@ services:
       - "traefik.docker.network=traefik-network"
       # HTTP router
       - "traefik.http.routers.ssh-frontend-http.rule=Host(`ssh-client.duckdns.org`)"
-      - "traefik.http.routers.ssh-frontend-http.entrypoints=http"
+      - "traefik.http.routers.ssh-frontend-http.entrypoints=web"
       - "traefik.http.services.ssh-frontend.loadbalancer.server.port=80"
       # HTTPS router
       - "traefik.http.routers.ssh-frontend.rule=Host(`ssh-client.duckdns.org`)"
-      - "traefik.http.routers.ssh-frontend.entrypoints=https"
+      - "traefik.http.routers.ssh-frontend.entrypoints=websecure"
       - "traefik.http.routers.ssh-frontend.tls=true"
       - "traefik.http.routers.ssh-frontend.tls.certresolver=letsencrypt"
 
