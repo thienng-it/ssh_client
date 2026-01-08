@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  traefik:
+    image: traefik:v2.10
+    container_name: ssh-traefik
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt
+    networks:
+      - ssh-traefik-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`${SSH_DOMAIN}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: ssh-backend
+    restart: unless-stopped
+    networks:
+      - ssh-traefik-network
+      - ssh-internal
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: ssh-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - traefik
+    networks:
+      - ssh-traefik-network
+      - ssh-internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=ssh-traefik-network"
+      # HTTP router with redirect
+      - "traefik.http.routers.ssh-frontend-http.rule=Host(`${SSH_DOMAIN}`)"
+      - "traefik.http.routers.ssh-frontend-http.entrypoints=web"
+      - "traefik.http.routers.ssh-frontend-http.middlewares=https-redirect"
+      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.https-redirect.redirectscheme.permanent=true"
+      # HTTPS router
+      - "traefik.http.routers.ssh-frontend.rule=Host(`${SSH_DOMAIN}`)"
+      - "traefik.http.routers.ssh-frontend.entrypoints=websecure"
+      - "traefik.http.routers.ssh-frontend.tls=true"
+      - "traefik.http.routers.ssh-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.ssh-frontend.loadbalancer.server.port=80"
+
+networks:
+  ssh-traefik-network:
+    driver: bridge
+  ssh-internal:
+    driver: bridge

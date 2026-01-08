@@ -38,5 +38,6 @@ services:
 networks:
   traefik-network:
     external: true
+    name: REPLACE_WITH_YOUR_NETWORK_NAME
   ssh-internal:
     driver: bridge
