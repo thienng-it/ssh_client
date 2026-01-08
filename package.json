@@ -1,7 +1,7 @@
 {
   "name": "ssh_client",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "homepage": "https://thienng-it.github.io/ssh_client/",
   "scripts": {

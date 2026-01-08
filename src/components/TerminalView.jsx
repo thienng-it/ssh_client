@@ -1,13 +1,26 @@
-import React, { useEffect, useRef } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+import React, { useEffect, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
+import { Command, X, Plus } from 'lucide-react';
 import '@xterm/xterm/css/xterm.css';
+import { loadCommands, saveCommands } from '../utils/storage';
 
 const TerminalView = ({ host }) => {
     const terminalRef = useRef(null);
     const xtermRef = useRef(null);
     const fitAddonRef = useRef(null);
     const wsRef = useRef(null);
+    const [showCommands, setShowCommands] = useState(false);
+    const [commands, setCommands] = useState([]);
+    const [currentCommand, setCurrentCommand] = useState('');
+    const [hasTypedCommand, setHasTypedCommand] = useState(false);
+    const [showSaveModal, setShowSaveModal] = useState(false);
+    const [commandName, setCommandName] = useState('');
+
+    useEffect(() => {
+        setCommands(loadCommands());
+    }, []);
 
     useEffect(() => {
         if (!terminalRef.current) return;
@@ -41,6 +54,8 @@ const TerminalView = ({ host }) => {
             fontFamily: 'Menlo, Monaco, "Courier New", monospace',
             fontSize: 14,
             cursorBlink: true,
+            rightClickSelectsWord: true,
+            allowProposedApi: true
         });
 
         const fitAddon = new FitAddon();
@@ -50,6 +65,48 @@ const TerminalView = ({ host }) => {
 
         xtermRef.current = term;
         fitAddonRef.current = fitAddon;
+
+        // Add copy support - listen to selection changes
+        terminalRef.current.addEventListener('mouseup', () => {
+            const selection = term.getSelection();
+            if (selection) {
+                // Auto-copy on selection (optional, can be removed if not desired)
+                navigator.clipboard.writeText(selection).catch(err => {
+                    console.error('Failed to copy:', err);
+                });
+            }
+        });
+
+        // Add keyboard copy/paste support
+        terminalRef.current.addEventListener('keydown', (event) => {
+            // Only handle if focus is on terminal, not on input fields
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+                return;
+            }
+            
+            // Cmd+C / Ctrl+C - Copy
+            if ((event.metaKey || event.ctrlKey) && event.key === 'c') {
+                const selection = term.getSelection();
+                if (selection) {
+                    navigator.clipboard.writeText(selection).then(() => {
+                        console.log('Copied to clipboard:', selection);
+                    }).catch(err => {
+                        console.error('Failed to copy:', err);
+                    });
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+            }
+            // Cmd+V / Ctrl+V - Paste
+            if ((event.metaKey || event.ctrlKey) && event.key === 'v') {
+                event.preventDefault();
+                navigator.clipboard.readText().then(text => {
+                    term.paste(text);
+                }).catch(err => {
+                    console.error('Failed to paste:', err);
+                });
+            }
+        });
 
         term.writeln(`\x1b[1;32m➜\x1b[0m Connecting to \x1b[1;36m${host.name}\x1b[0m (${host.ip})...`);
 
@@ -67,12 +124,26 @@ const TerminalView = ({ host }) => {
             term.onData((data) => {
                 const code = data.charCodeAt(0);
                 if (code === 13) {
+                    // Get the current line from terminal buffer
+                    const buffer = term.buffer.active;
+                    const cursorY = buffer.cursorY;
+                    const line = buffer.getLine(cursorY);
+                    if (line) {
+                        const lineText = line.translateToString(true).trim();
+                        // Remove prompt (everything after $)
+                        const commandMatch = lineText.match(/\$\s*(.+)$/);
+                        if (commandMatch && commandMatch[1].trim()) {
+                            setCurrentCommand(commandMatch[1].trim());
+                        }
+                    }
                     term.write('\r\n');
                     term.write(`\x1b[1;34m${host.username}@${host.name}\x1b[0m:~$ `);
                 } else if (code === 127) {
                     term.write('\b \b');
+                    setHasTypedCommand(true);
                 } else {
                     term.write(data);
+                    setHasTypedCommand(true);
                 }
             });
         } else {
@@ -110,6 +181,27 @@ const TerminalView = ({ host }) => {
             ws.onclose = () => term.writeln('\r\n\x1b[1;33mDisconnected from server.\x1b[0m');
 
             term.onData((data) => {
+                const code = data.charCodeAt(0);
+                
+                // Track commands - capture from terminal buffer instead of keystrokes
+                if (code === 13) { // Enter
+                    // Get the current line from terminal buffer
+                    const buffer = term.buffer.active;
+                    const cursorY = buffer.cursorY;
+                    const line = buffer.getLine(cursorY);
+                    if (line) {
+                        const lineText = line.translateToString(true).trim();
+                        // Remove prompt (everything before $)
+                        const commandMatch = lineText.match(/\$\s*(.+)$/);
+                        if (commandMatch && commandMatch[1].trim()) {
+                            setCurrentCommand(commandMatch[1].trim());
+                        }
+                    }
+                } else {
+                    setHasTypedCommand(true);
+                }
+                
+                // Send to SSH server
                 if (ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({ type: 'data', data: btoa(data) }));
                 }
@@ -132,8 +224,234 @@ const TerminalView = ({ host }) => {
         };
     }, [host]);
 
+    const executeCommand = (command) => {
+        if (xtermRef.current) {
+            xtermRef.current.write(command.command + '\r');
+        }
+    };
+
+    const handleSaveCommand = () => {
+        if (commandName.trim() && currentCommand) {
+            const newCommand = {
+                id: Date.now().toString(),
+                name: commandName.trim(),
+                command: currentCommand
+            };
+            const updatedCommands = [...commands, newCommand];
+            setCommands(updatedCommands);
+            saveCommands(updatedCommands);
+            setShowSaveModal(false);
+            setCommandName('');
+            setCurrentCommand('');
+            setHasTypedCommand(false);
+        }
+    };
+
     return (
-        <div style={{ height: '100%', width: '100%', padding: 'var(--spacing-md)', backgroundColor: 'var(--bg-terminal)' }}>
+        <div style={{ height: '100%', width: '100%', padding: 'var(--spacing-md)', backgroundColor: 'var(--bg-terminal)', position: 'relative' }}>
+            <div style={{ position: 'absolute', top: 'var(--spacing-md)', right: 'var(--spacing-md)', zIndex: 100, display: 'flex', gap: '8px' }}>
+                {(currentCommand || hasTypedCommand) && (
+                    <button
+                        onClick={() => setShowSaveModal(true)}
+                        style={{
+                            background: 'var(--accent-success)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '6px',
+                            padding: '8px',
+                            cursor: 'pointer',
+                            color: '#fff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            fontWeight: '500'
+                        }}
+                        title="Save last command"
+                    >
+                        <Plus size={16} />
+                        Save Command
+                    </button>
+                )}
+                <button
+                    onClick={() => setShowCommands(!showCommands)}
+                    style={{
+                        background: 'var(--bg-card)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '6px',
+                        padding: '8px',
+                        cursor: 'pointer',
+                        color: 'var(--text-primary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                    }}
+                >
+                    <Command size={16} />
+                    Commands
+                </button>
+            </div>
+
+            {showCommands && commands.length > 0 && (
+                <div style={{
+                    position: 'absolute',
+                    top: '60px',
+                    right: 'var(--spacing-md)',
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    padding: 'var(--spacing-sm)',
+                    zIndex: 100,
+                    maxWidth: '300px',
+                    maxHeight: '400px',
+                    overflowY: 'auto',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)'
+                }}>
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: 'var(--spacing-sm)',
+                        paddingBottom: 'var(--spacing-xs)',
+                        borderBottom: '1px solid var(--border-color)'
+                    }}>
+                        <span style={{ fontWeight: '500', color: 'var(--text-primary)' }}>Quick Commands</span>
+                        <button
+                            onClick={() => setShowCommands(false)}
+                            style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--text-muted)',
+                                cursor: 'pointer',
+                                padding: '2px'
+                            }}
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                    {commands.map(cmd => (
+                        <button
+                            key={cmd.id}
+                            onClick={() => executeCommand(cmd)}
+                            style={{
+                                display: 'block',
+                                width: '100%',
+                                textAlign: 'left',
+                                background: 'var(--bg-secondary)',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '4px',
+                                padding: 'var(--spacing-xs)',
+                                marginBottom: '4px',
+                                cursor: 'pointer',
+                                color: 'var(--text-primary)'
+                            }}
+                        >
+                            <div style={{ fontWeight: '500', fontSize: '0.85rem' }}>{cmd.name}</div>
+                            <div style={{ 
+                                fontFamily: 'monospace', 
+                                fontSize: '0.75rem', 
+                                color: 'var(--text-muted)',
+                                marginTop: '2px'
+                            }}>
+                                {cmd.command}
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {showSaveModal && (
+                <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    padding: 'var(--spacing-lg)',
+                    zIndex: 200,
+                    minWidth: '300px',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+                }}>
+                    <h3 style={{ margin: '0 0 var(--spacing-md) 0', color: 'var(--text-primary)' }}>Save Command</h3>
+                    <div style={{ marginBottom: 'var(--spacing-sm)' }}>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                            Command Name
+                        </label>
+                        <input
+                            type="text"
+                            value={commandName}
+                            onChange={(e) => setCommandName(e.target.value)}
+                            placeholder="e.g., List files"
+                            style={{
+                                width: '100%',
+                                padding: '8px',
+                                background: 'var(--bg-base)',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '4px',
+                                color: 'var(--text-primary)',
+                                outline: 'none'
+                            }}
+                            autoFocus
+                        />
+                    </div>
+                    <div style={{ marginBottom: 'var(--spacing-md)' }}>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                            Command
+                        </label>
+                        <input
+                            type="text"
+                            value={currentCommand || ''}
+                            onChange={(e) => setCurrentCommand(e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '8px',
+                                background: 'var(--bg-base)',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '4px',
+                                color: 'var(--text-primary)',
+                                fontFamily: 'monospace',
+                                fontSize: '0.85rem',
+                                outline: 'none'
+                            }}
+                        />
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                        <button
+                            onClick={() => { setShowSaveModal(false); setCommandName(''); }}
+                            style={{
+                                padding: '8px 16px',
+                                background: 'transparent',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '4px',
+                                color: 'var(--text-secondary)',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSaveCommand}
+                            disabled={!commandName.trim()}
+                            style={{
+                                padding: '8px 16px',
+                                background: 'var(--accent-primary)',
+                                border: 'none',
+                                borderRadius: '4px',
+                                color: '#fff',
+                                cursor: commandName.trim() ? 'pointer' : 'not-allowed',
+                                opacity: commandName.trim() ? 1 : 0.5,
+                                fontWeight: '500'
+                            }}
+                        >
+                            Save
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div ref={terminalRef} style={{ height: '100%', width: '100%' }} />
         </div>
     );

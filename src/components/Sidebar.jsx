@@ -1,7 +1,7 @@
 import React from 'react';
-import { Server, Plus, Settings, Edit2, Trash2, Moon, Sun, X } from 'lucide-react';
+import { Server, Plus, Settings, Edit2, Trash2, Moon, Sun, X, Terminal } from 'lucide-react';
 
-const Sidebar = ({ hosts, activeHostId, onSelectHost, onNewConnection, onEditHost, onDeleteHost, theme, onToggleTheme, isOpen, onClose }) => {
+const Sidebar = ({ hosts, activeHostId, onSelectHost, onNewConnection, onEditHost, onDeleteHost, theme, onToggleTheme, isOpen, onClose, onShowCommands }) => {
     return (
         <>
             {isOpen && (
@@ -154,6 +154,40 @@ const Sidebar = ({ hosts, activeHostId, onSelectHost, onNewConnection, onEditHos
                         </div>
                     </div>
                 ))}
+
+                <div style={{
+                    marginTop: 'var(--spacing-md)',
+                    marginBottom: 'var(--spacing-sm)',
+                    fontSize: '0.75rem',
+                    color: 'var(--text-muted)',
+                    paddingLeft: 'var(--spacing-xs)'
+                }}>
+                    COMMANDS
+                </div>
+
+                <button
+                    onClick={onShowCommands}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--spacing-sm)',
+                        padding: 'var(--spacing-sm)',
+                        backgroundColor: 'transparent',
+                        color: 'var(--text-secondary)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '6px',
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        transition: 'var(--transition-fast)',
+                        width: '100%',
+                        textAlign: 'left'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-card)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                    <Terminal size={16} />
+                    Manage Commands
+                </button>
             </div>
 
             <div style={{

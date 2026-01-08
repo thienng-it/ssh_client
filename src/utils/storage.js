@@ -37,3 +37,23 @@ export const loadHosts = () => {
 
 export const saveTheme = (theme) => localStorage.setItem('theme', theme);
 export const loadTheme = () => localStorage.getItem('theme') || 'dark';
+
+export const saveCommands = (commands) => {
+    try {
+        localStorage.setItem('ssh_commands', encrypt(JSON.stringify(commands)));
+    } catch (e) {
+        console.error('Failed to save commands:', e);
+    }
+};
+
+export const loadCommands = () => {
+    try {
+        const data = localStorage.getItem('ssh_commands');
+        if (!data) return [];
+        const decrypted = decrypt(data);
+        return decrypted ? JSON.parse(decrypted) : [];
+    } catch (e) {
+        console.error('Failed to load commands:', e);
+        return [];
+    }
+};

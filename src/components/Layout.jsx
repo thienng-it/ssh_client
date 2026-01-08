@@ -5,7 +5,8 @@ import TerminalView from './TerminalView';
 import HostManager from './HostManager';
 import LandingPage from './LandingPage';
 import Modal from './Modal';
-import { saveHosts, loadHosts, saveTheme, loadTheme } from '../utils/storage';
+import CommandManager from './CommandManager';
+import { saveHosts, loadHosts, saveTheme, loadTheme, saveCommands, loadCommands } from '../utils/storage';
 import { Menu } from 'lucide-react';
 
 const Layout = () => {
@@ -18,11 +19,14 @@ const Layout = () => {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, hostId: null });
     const [switchEditModal, setSwitchEditModal] = useState({ isOpen: false, targetAction: null });
+    const [commands, setCommands] = useState([]);
+    const [showCommands, setShowCommands] = useState(false);
 
     // Initialize from localStorage on mount
      
     useEffect(() => {
         const savedHosts = loadHosts();
+        const savedCommands = loadCommands();
         const savedTheme = loadTheme();
         const initialHosts = savedHosts.length > 0 ? savedHosts : [
             { id: '1', name: 'Production Server', ip: '192.168.1.10', username: 'root', port: '22' },
@@ -32,6 +36,7 @@ const Layout = () => {
         document.documentElement.setAttribute('data-theme', savedTheme);
         
         setHosts(initialHosts);
+        setCommands(savedCommands);
         setTheme(savedTheme);
         setIsLoaded(true);
     }, []);
@@ -41,6 +46,12 @@ const Layout = () => {
             saveHosts(hosts);
         }
     }, [hosts, isLoaded]);
+
+    useEffect(() => {
+        if (isLoaded) {
+            saveCommands(commands);
+        }
+    }, [commands, isLoaded]);
 
     const handleToggleTheme = () => {
         const newTheme = theme === 'dark' ? 'light' : 'dark';
@@ -133,6 +144,26 @@ const Layout = () => {
         setActiveHostId(null);
     };
 
+    const handleSaveCommand = (commandData) => {
+        setCommands([...commands, commandData]);
+    };
+
+    const handleEditCommand = (command) => {
+        // For simplicity, we'll just delete and re-add
+        setCommands(commands.filter(c => c.id !== command.id));
+    };
+
+    const handleDeleteCommand = (id) => {
+        setCommands(commands.filter(c => c.id !== id));
+    };
+
+    const handleExecuteCommand = (command) => {
+        // Send command to active terminal if connected
+        if (activeHostId && window.terminalRef?.current) {
+            window.terminalRef.current.write(command.command + '\r');
+        }
+    };
+
     return (
         <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
             <Sidebar
@@ -146,6 +177,13 @@ const Layout = () => {
                 onToggleTheme={handleToggleTheme}
                 isOpen={sidebarOpen}
                 onClose={() => setSidebarOpen(false)}
+                onShowCommands={() => {
+                    setActiveHostId(null);
+                    setShowNewConnection(false);
+                    setEditingHostId(null);
+                    setShowCommands(true);
+                    setSidebarOpen(false);
+                }}
             />
 
             <div style={{ flex: 1, backgroundColor: 'var(--bg-base)', overflow: 'hidden', position: 'relative' }}>
@@ -176,6 +214,14 @@ const Layout = () => {
                     <TerminalView host={activeHost} />
                 ) : showNewConnection || editingHost ? (
                     <HostManager onSave={handleSaveHost} editingHost={editingHost} />
+                ) : showCommands ? (
+                    <CommandManager 
+                        commands={commands}
+                        onSave={handleSaveCommand}
+                        onEdit={handleEditCommand}
+                        onDelete={handleDeleteCommand}
+                        onExecute={handleExecuteCommand}
+                    />
                 ) : (
                     <LandingPage onNewConnection={handleNewConnection} hostsCount={hosts.length} />
                 )}
