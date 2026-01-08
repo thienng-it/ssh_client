@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: ssh-backend-local
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    networks:
+      - ssh-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: ssh-frontend-local
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+    networks:
+      - ssh-network
+
+networks:
+  ssh-network:
+    driver: bridge

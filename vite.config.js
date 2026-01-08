@@ -18,8 +18,12 @@ try {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/ssh_client/',
+  base: process.env.VITE_BASE_PATH || '/',
   define: {
     __APP_VERSION__: JSON.stringify(`${version}+${gitHash}`)
+  },
+  server: {
+    host: true,
+    port: 5173
   }
 })
