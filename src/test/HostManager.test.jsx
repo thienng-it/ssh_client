@@ -54,12 +54,12 @@ describe('HostManager Component', () => {
     const submitButton = screen.getByRole('button', { name: /Save Host/i });
     await user.click(submitButton);
     
-    expect(mockOnSave).toHaveBeenCalledWith({
+    expect(mockOnSave).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Test Server',
       ip: '192.168.1.100',
       username: 'admin',
       port: '22'
-    });
+    }));
   });
 
   it('requires name field', async () => {

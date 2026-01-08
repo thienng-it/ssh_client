@@ -37,14 +37,20 @@ A sleek, modern SSH client built with React, Vite, and xterm.js. Inspired by Ter
 2. **Install dependencies**
    ```bash
    npm install
+   cd server && npm install && cd ..
    ```
 
-3. **Start the development server**
+3. **Start the SSH backend server** (required for real connections)
+   ```bash
+   cd server && npm start
+   ```
+
+4. **Start the frontend** (in a new terminal)
    ```bash
    npm run dev
    ```
 
-4. **Build for production**
+5. **Build for production**
    ```bash
    npm run build
    ```

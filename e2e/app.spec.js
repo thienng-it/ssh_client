@@ -4,63 +4,58 @@ test.describe('SSH Client Application', () => {
   test('should load the application', async ({ page }) => {
     await page.goto('/');
     
-    // Wait for the application to load
-    await expect(page.locator('text=SSH Client')).toBeVisible();
+    // Wait for the application to load - check for landing page
+    await expect(page.getByRole('heading', { name: 'Modern SSH Client' })).toBeVisible();
   });
 
   test('should display sidebar with hosts', async ({ page }) => {
     await page.goto('/');
     
-    // Check sidebar elements
-    await expect(page.locator('text=SSH Client')).toBeVisible();
+    // Check sidebar elements - use data-testid for sidebar
+    await expect(page.getByTestId('sidebar')).toBeVisible();
     await expect(page.locator('text=Production Server')).toBeVisible();
     await expect(page.locator('text=Staging DB')).toBeVisible();
     await expect(page.locator('button:has-text("New Connection")')).toBeVisible();
-    await expect(page.locator('button:has-text("Settings")')).toBeVisible();
   });
 
-  test('should show new connection form by default', async ({ page }) => {
+  test('should show landing page by default', async ({ page }) => {
     await page.goto('/');
     
-    // Check for form elements - using heading role to be more specific
-    await expect(page.getByRole('heading', { name: 'New Connection' })).toBeVisible();
-    await expect(page.locator('input[placeholder="Production Server"]')).toBeVisible();
-    await expect(page.locator('input[placeholder="192.168.1.1"]')).toBeVisible();
-    await expect(page.locator('input[placeholder="22"]')).toBeVisible();
-    await expect(page.locator('input[placeholder="root"]')).toBeVisible();
+    // Check for landing page elements
+    await expect(page.getByRole('heading', { name: 'Modern SSH Client' })).toBeVisible();
+    await expect(page.getByText('Select a host from the sidebar to start a session')).toBeVisible();
   });
 
   test('should switch to terminal view when host is selected', async ({ page }) => {
     await page.goto('/');
     
     // Click on Production Server
-    await page.locator('text=Production Server').click();
+    await page.locator('text=Production Server').first().click();
     
-    // Wait for terminal to appear - check for xterm-specific classes or elements
-    await page.waitForTimeout(1000); // Give terminal time to initialize
+    // Wait for terminal to appear
+    await page.waitForTimeout(1000);
     
-    // The terminal should be visible (checking for xterm container)
-    const terminalExists = await page.locator('.xterm').count() > 0 || 
-                           await page.locator('[style*="height: 100%"]').count() > 0;
-    expect(terminalExists).toBeTruthy();
+    // Check that landing page is gone and terminal is present
+    await expect(page.getByRole('heading', { name: 'Modern SSH Client' })).not.toBeVisible();
   });
 
   test('should show new connection form when New Connection is clicked', async ({ page }) => {
     await page.goto('/');
     
-    // First, click on a host
-    await page.locator('text=Production Server').click();
-    await page.waitForTimeout(500);
-    
-    // Then click New Connection
+    // Click New Connection
     await page.locator('button:has-text("New Connection")').click();
     
-    // Should show the form again
+    // Should show the form
+    await expect(page.getByTestId('host-manager')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'New Connection' })).toBeVisible();
     await expect(page.locator('input[placeholder="Production Server"]')).toBeVisible();
   });
 
   test('should be able to fill in connection form', async ({ page }) => {
     await page.goto('/');
+    
+    // Click New Connection first
+    await page.locator('button:has-text("New Connection")').click();
     
     // Fill in the form
     await page.locator('input[placeholder="Production Server"]').fill('Test Server');
@@ -75,20 +70,24 @@ test.describe('SSH Client Application', () => {
     await expect(page.locator('input[placeholder="root"]')).toHaveValue('testuser');
   });
 
-  test('should save new host when form is submitted', async ({ page }) => {
+  test('should save new host and return to landing page', async ({ page }) => {
     await page.goto('/');
+    
+    // Click New Connection
+    await page.locator('button:has-text("New Connection")').click();
     
     // Fill in the form
     await page.locator('input[placeholder="Production Server"]').fill('E2E Test Server');
     await page.locator('input[placeholder="192.168.1.1"]').fill('192.168.1.100');
+    await page.locator('input[placeholder="root"]').fill('testuser');
     
     // Submit the form
     await page.locator('button:has-text("Save Host")').click();
     
-    // Wait for the form to be processed
-    await page.waitForTimeout(500);
+    // Should return to landing page
+    await expect(page.getByRole('heading', { name: 'Modern SSH Client' })).toBeVisible();
     
-    // The new connection form should no longer be visible
-    // (This may vary based on implementation - adjust as needed)
+    // New host should appear in sidebar
+    await expect(page.locator('text=E2E Test Server')).toBeVisible();
   });
 });

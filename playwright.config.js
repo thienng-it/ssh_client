@@ -1,6 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
 
-/* global process */
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,

@@ -1,8 +1,8 @@
 :root {
   /* Colors - Catppuccin Mocha inspired */
   --bg-base: #1e1e2e;
-  --bg-sidebar: #181825;
-  --bg-card: #313244;
+  --bg-sidebar: rgba(24, 24, 37, 0.7);
+  --bg-card: rgba(49, 50, 68, 0.6);
   --bg-terminal: #11111b;
   
   --text-primary: #cdd6f4;
@@ -14,7 +14,7 @@
   --accent-success: #a6e3a1;
   --accent-error: #f38ba8;
   
-  --border-color: #45475a;
+  --border-color: rgba(69, 71, 90, 0.5);
   
   /* Spacing */
   --spacing-xs: 0.25rem;
@@ -26,6 +26,24 @@
   /* Transitions */
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s ease;
+}
+
+[data-theme="light"] {
+  --bg-base: #eff1f5;
+  --bg-sidebar: rgba(230, 233, 239, 0.7);
+  --bg-card: rgba(220, 224, 232, 0.6);
+  --bg-terminal: #e6e9ef;
+  
+  --text-primary: #4c4f69;
+  --text-secondary: #5c5f77;
+  --text-muted: #9ca0b0;
+  
+  --accent-primary: #8839ef;
+  --accent-secondary: #1e66f5;
+  --accent-success: #40a02b;
+  --accent-error: #d20f39;
+  
+  --border-color: rgba(204, 208, 218, 0.5);
 }
 
 body {
@@ -58,4 +76,32 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    z-index: 999;
+  }
+  
+  .sidebar-overlay {
+    display: block !important;
+  }
+  
+  .sidebar-close {
+    display: flex !important;
+  }
+  
+  .menu-button {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .sidebar {
+    transform: translateX(0) !important;
+  }
 }

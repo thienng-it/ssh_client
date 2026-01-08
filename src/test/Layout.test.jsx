@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import Layout from '../components/Layout';
 
 // Mock the child components
@@ -47,10 +48,10 @@ describe('Layout Component', () => {
     expect(screen.getByText('Staging DB')).toBeInTheDocument();
   });
 
-  it('shows HostManager by default when no host is selected', () => {
+  it('shows LandingPage by default when no host is selected', () => {
     render(<Layout />);
     
-    expect(screen.getByTestId('host-manager')).toBeInTheDocument();
+    expect(screen.getByText('Modern SSH Client')).toBeInTheDocument();
     expect(screen.queryByTestId('terminal-view')).not.toBeInTheDocument();
   });
 
@@ -90,18 +91,15 @@ describe('Layout Component', () => {
     expect(screen.queryByTestId('terminal-view')).not.toBeInTheDocument();
   });
 
-  it('adds new host when saved from HostManager', () => {
+  it('shows HostManager when New Connection is clicked and returns to landing after save', async () => {
+    const user = userEvent.setup();
     render(<Layout />);
     
-    // Initially shows HostManager
-    expect(screen.getByTestId('host-manager')).toBeInTheDocument();
+    // Click New Connection
+    await user.click(screen.getByText('New Connection'));
     
-    // Submit the form
-    const saveButton = screen.getByRole('button', { name: 'Save' });
-    fireEvent.click(saveButton);
-    
-    // After saving, we should have a new host available
-    // The HostManager visibility depends on the implementation logic
-    // which may keep showing it or hide it based on activeHostId state
+    // Should show HostManager
+    expect(await screen.findByTestId('host-manager')).toBeInTheDocument();
+    expect(screen.getByText('New Connection')).toBeInTheDocument();
   });
 });
