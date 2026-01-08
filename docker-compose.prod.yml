@@ -25,12 +25,12 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-network"
-      # HTTP router (test without HTTPS first)
-      - "traefik.http.routers.ssh-frontend-http.rule=Host(`${SSH_DOMAIN}`)"
+      # HTTP router
+      - "traefik.http.routers.ssh-frontend-http.rule=Host(`ssh-client.duckdns.org`)"
       - "traefik.http.routers.ssh-frontend-http.entrypoints=http"
       - "traefik.http.services.ssh-frontend.loadbalancer.server.port=80"
       # HTTPS router
-      - "traefik.http.routers.ssh-frontend.rule=Host(`${SSH_DOMAIN}`)"
+      - "traefik.http.routers.ssh-frontend.rule=Host(`ssh-client.duckdns.org`)"
       - "traefik.http.routers.ssh-frontend.entrypoints=https"
       - "traefik.http.routers.ssh-frontend.tls=true"
       - "traefik.http.routers.ssh-frontend.tls.certresolver=letsencrypt"
