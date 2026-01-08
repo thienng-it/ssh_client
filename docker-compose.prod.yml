@@ -8,8 +8,8 @@ services:
     container_name: ssh-backend
     restart: unless-stopped
     networks:
-      - traefik-network
-      - ssh-internal
+      traefik-network:
+      ssh-internal:
 
   frontend:
     build:
@@ -20,8 +20,8 @@ services:
     depends_on:
       - backend
     networks:
-      - traefik-network
-      - ssh-internal
+      traefik-network:
+      ssh-internal:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-network"
